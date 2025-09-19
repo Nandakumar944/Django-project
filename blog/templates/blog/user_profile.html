@@ -1,0 +1,37 @@
+<h1>{{ user_obj.username }}'s Profile</h1>
+
+{% if profile.avatar %}
+<img src="{{ profile.avatar.url }}" alt="Avatar" width="100">
+{% endif %}
+
+<p>{{ profile.bio }}</p>
+<p>Website: <a href="{{ profile.website }}">{{ profile.website }}</a></p>
+<p>Twitter: <a href="{{ profile.twitter }}">{{ profile.twitter }}</a></p>
+<p>LinkedIn: <a href="{{ profile.linkedin }}">{{ profile.linkedin }}</a></p>
+
+<h2>Posts</h2>
+<ul>
+    {% for post in posts %}
+    <li><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></li>
+    {% empty %}
+    <li>No posts yet.</li>
+    {% endfor %}
+</ul>
+
+<h2>Likes</h2>
+<ul>
+    {% for like in likes %}
+    <li><a href="{% url 'post_detail' like.post.pk %}">{{ like.post.title }}</a></li>
+    {% empty %}
+    <li>No liked posts yet.</li>
+    {% endfor %}
+</ul>
+
+<h2>Bookmarks</h2>
+<ul>
+    {% for bookmark in bookmarks %}
+    <li><a href="{% url 'post_detail' bookmark.post.pk %}">{{ bookmark.post.title }}</a></li>
+    {% empty %}
+    <li>No bookmarks yet.</li>
+    {% endfor %}
+</ul>

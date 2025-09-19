@@ -1,0 +1,22 @@
+
+{% extends "blog/base.html" %}
+{% block content %}
+<h2 class="mb-3">{% if filter %}{{ filter }}{% else %}Recent Posts{% endif %}</h2>
+<form method="get" action="{% url 'search_posts' %}" class="mb-3">
+  <div class="input-group">
+    <input type="text" class="form-control" name="q" placeholder="Search posts...">
+    <button class="btn btn-outline-secondary" type="submit">Search</button>
+  </div>
+</form>
+{% for post in posts %}
+  <div class="card mb-3">
+    <div class="card-body">
+      <h4><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h4>
+      <p class="mb-1">{{ post.content|truncatewords:30 }}</p>
+      <small>By {{ post.author }} • {{ post.created_at }}</small>
+    </div>
+  </div>
+{% empty %}
+  <p>No posts yet.</p>
+{% endfor %}
+{% endblock %}

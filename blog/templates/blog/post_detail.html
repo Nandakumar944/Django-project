@@ -1,0 +1,63 @@
+
+{% extends "blog/base.html" %}
+{% block content %}
+<h2>{{ post.title }}</h2>
+<p>{{ post.content }}</p>
+<p><small>By {{ post.author }} • {{ post.created_at }}</small></p>
+
+{% if user == post.author %}
+  <p>
+    <a href="{% url 'update_post' post.pk %}" class="btn btn-warning btn-sm">Edit</a>
+    <form method="post" action="{% url 'delete_post' post.pk %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+    </form>
+  </p>
+{% endif %}
+
+<hr>
+<h4>Comments</h4>
+{% for comment in comments %}
+  <div class="mb-2">
+    <strong>{{ comment.user }}</strong>: {{ comment.text }}
+    {% if user.is_superuser or user == comment.user %}
+      <form method="post" action="{% url 'delete_comment' comment.id %}" class="d-inline">
+        {% csrf_token %}
+        <button class="btn btn-sm btn-outline-danger">Delete</button>
+      </form>
+    {% endif %}
+  </div>
+{% empty %}
+  <p>No comments yet.</p>
+{% endfor %}
+
+{% if user.is_authenticated %}
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-secondary btn-sm">Add Comment</button>
+  </form>
+{% else %}
+  <p><a href="{% url 'login' %}">Login</a> to comment.</p>
+{% endif %}
+{% endblock %}
+
+
+<h1>{{ post.title }}</h1>
+<p>{{ post.content }}</p>
+
+<!-- Like Button -->
+<form method="post" action="{% url 'toggle_like' post.pk %}">
+  {% csrf_token %}
+  <button type="submit">
+    👍 Like ({{ post.likes.count }})
+  </button>
+</form>
+
+<!-- Bookmark Button -->
+<form method="post" action="{% url 'toggle_bookmark' post.pk %}">
+  {% csrf_token %}
+  <button type="submit">
+    📑 Bookmark
+  </button>
+</form>

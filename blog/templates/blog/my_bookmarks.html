@@ -1,0 +1,10 @@
+<h2>My Bookmarked Posts</h2>
+<ul>
+  {% for b in bookmarks %}
+    <li>
+      <a href="{% url 'post_detail' b.post.pk %}">{{ b.post.title }}</a>
+    </li>
+  {% empty %}
+    <p>No bookmarks yet.</p>
+  {% endfor %}
+</ul>
