@@ -11,6 +11,10 @@ from .models import Post, Category, Tag, Comment, Bookmark, Like, Notification, 
 from django.http import JsonResponse
 import json
 
+# ---- DRF imports for JWT ----
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 
 # -------------------------
@@ -109,16 +113,6 @@ def search_posts(request):
 # -------------------------
 # Authentication
 # -------------------------
-"""def register(request):
-    if request.method == "POST":
-        form = UserRegisterForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect("home")
-    else:
-        form = UserRegisterForm()"""
-    #return render(request, "blog/register.html", {"form": form})
 def register(request):
     if request.method == "POST":
         print(request.POST)
@@ -131,24 +125,16 @@ def register(request):
         if form.is_valid():
             print("Form is valid")
             user = form.save()
-            #login(request, user)
-
-            # If request is JSON / API
-           #
             return JsonResponse({
-                    "status": "success",
-                    "message": "User registered successfully",
-                    "user": {
-                        "id": user.id,
-                        "username": user.username,
-                        "email": user.email,
-                    }
-                })
-
-            # If normal browser form
-            #return redirect("home")
+                "status": "success",
+                "message": "User registered successfully",
+                "user": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                }
+            })
         else:
-            # Handle errors for JSON requests
             if request.headers.get("Accept") == "application/json":
                 return JsonResponse({
                     "status": "error",
@@ -157,29 +143,20 @@ def register(request):
     else:
         form = UserRegisterForm()
 
-    # Normal browser request (render HTML form)
     return render(request, "blog/register.html", {"form": form})
 
 
-"""def user_login(request):
-    if request.method == "POST":
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            login(request, form.get_user())
-            return redirect("home")
-    else:
-        form = AuthenticationForm()
-    return render(request, "blog/login.html", {"form": form})"""
 def user_login(request):
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
         if form.is_valid():
             user = form.get_user()
-            login(request, user)   # <-- this sets sessionid cookie
+            login(request, user)   # session login
             return redirect("home")
     else:
         form = AuthenticationForm()
     return render(request, "blog/login.html", {"form": form})
+
 
 def user_logout(request):
     logout(request)
@@ -209,25 +186,10 @@ def profile(request, username):
 # -------------------------
 # Post detail & comments
 # -------------------------
-"""def post_detail(request, pk):
-    post = get_object_or_404(Post, pk=pk, approved=True)
-    comments = post.comments.all()
-    form = CommentForm(request.POST or None)
-
-    if request.method == "POST" and request.user.is_authenticated and form.is_valid():
-        comment = form.save(commit=False)
-        comment.user = request.user
-        comment.post = post
-        comment.save()
-        return redirect("post_detail", pk=post.pk)
-
-    return render(request, "blog/post_detail.html", {"post": post, "comments": comments, "form": form})
-"""
 def post_detail(request, pk):
     post = get_object_or_404(Post, pk=pk, approved=True)
     comments = post.comments.all().values("id", "user__username", "text", "created_at")
 
-    # Always return JSON for API requests
     if request.method == "GET":
         return JsonResponse({
             "post": {
@@ -239,7 +201,8 @@ def post_detail(request, pk):
         }, safe=False)
 
     return JsonResponse({"error": "Invalid request method"}, status=400)
- 
+
+
 @login_required
 def delete_comment(request, comment_id):
     comment = get_object_or_404(Comment, id=comment_id)
@@ -252,30 +215,17 @@ def delete_comment(request, comment_id):
 # -------------------------
 # Post CRUD
 # -------------------------
-"""@login_required
-def create_post(request):
-    form = PostForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        post = form.save(commit=False)
-        post.author = request.user
-        post.save()
-        form.save_m2m()
-        return redirect("post_detail", pk=post.pk)
-    return render(request, "blog/post_form.html", {"form": form, "title": "Create Post"})"""
 @login_required
-@csrf_exempt  # ⚠️ only for API testing; better to use CSRF tokens in production
+@csrf_exempt  # only for API testing
 def create_post(request):
     if request.method == "POST":
-        # If request is JSON (like from Postman)
         if request.content_type == "application/json":
             try:
                 data = json.loads(request.body)
             except json.JSONDecodeError:
                 return JsonResponse({"error": "Invalid JSON"}, status=400)
-
             form = PostForm(data)
         else:
-            # For normal HTML form
             form = PostForm(request.POST)
 
         if form.is_valid():
@@ -320,44 +270,17 @@ def delete_post(request, pk):
         return redirect("home")
     return render(request, "blog/post_confirm_delete.html", {"post": post})
 
-"""@csrf_exempt
-@login_required
-def create_post(request):
-    if request.method == "POST":
-        form = PostForm(request.POST)
-        if form.is_valid():
-            post = form.save(commit=False)
-            post.author = request.user
-            post.save()
-            form.save_m2m()
-            return JsonResponse({"message": "Post created successfully", "post_id": post.pk})
-        return JsonResponse({"errors": form.errors}, status=400)
-    return JsonResponse({"error": "Invalid request method"}, status=405)
 
-@login_required
-def update_post(request, pk):
-    post = get_object_or_404(Post, pk=pk, author=request.user)
-    form = PostForm(request.POST or None, instance=post)
-    if request.method == "POST":
-        if form.is_valid():
-            post = form.save()
-            return JsonResponse({
-                "success": True,
-                "message": "Post updated successfully",
-                "post": {
-                    "id": post.id,
-                    "title": post.title,
-                    "content": post.content,
-                }
-            })
-        return JsonResponse({"success": False, "errors": form.errors}, status=400)
-    return JsonResponse({"error": "Invalid request method"}, status=405)
+# -------------------------
+# JWT Protected Test Endpoint
+# -------------------------
+"""@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_protected_view(request):
+    return Response({"message": f"Hello {request.user.username}, you are authenticated via JWT!"})"""
 
-
-@login_required
-def delete_post(request, pk):
-    post = get_object_or_404(Post, pk=pk, author=request.user)
-    if request.method == "POST":
-        post.delete()
-        return JsonResponse({"success": True, "message": "Post deleted successfully"})
-    return JsonResponse({"error": "Invalid request method"}, status=405)"""
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def my_protected_view(request):
+    print("Authorization header:", request.headers.get("Authorization"))
+    return Response({"message": f"Hello {request.user.username}, you are authenticated!"})
